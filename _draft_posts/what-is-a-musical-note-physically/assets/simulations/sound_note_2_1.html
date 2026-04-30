@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    margin: 0;
+    background: transparent;
+  }
+
+  .sim-container {
+    width: 1400px;
+    max-width: 1000px;
+    margin: 0;
+    aspect-ratio: 16 / 6;
+  }
+  
+  canvas {
+    width: 1000px;
+    height: 100%;
+    display: block;
+    background: #111;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="sim-container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let width, height;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  width = canvas.width;
+  height = canvas.height;
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+function sendHeight() {
+  const height = document.body.scrollHeight;
+  parent.postMessage({ type: "resize", height: height }, "*");
+}
+
+window.onload = sendHeight;
+window.onresize = sendHeight;
+
+let time = 0;
+let lastTime = 0;
+
+const freq = 440;
+const soundSpeed = 340;
+const visualScale = 0.002;
+
+function draw(timestamp) {
+  let dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  time += dt;
+
+  ctx.clearRect(0, 0, width, height);
+
+  const omega = 2 * Math.PI * freq * visualScale;
+  const k = omega / soundSpeed;
+  const A = 0.2 * height;
+
+  ctx.beginPath();
+
+  for (let x = 0; x < width; x++) {
+    let y = height/2 + A * Math.sin(k * x - omega * time);
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  ctx.strokeStyle = "#00ccff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+
+</script>
+
+</body>
+</html>

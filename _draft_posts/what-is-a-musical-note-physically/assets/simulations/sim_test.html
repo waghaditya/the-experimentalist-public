@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: #fff;
+    font-family: sans-serif;
+  }
+
+  .sim-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    aspect-ratio: 16 / 6;
+    border: 2px solid #00ccff;
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .label {
+    position: absolute;
+    font-size: 12px;
+    color: #00ccff;
+  }
+
+  .top-left { top: 5px; left: 5px; }
+  .top-right { top: 5px; right: 5px; }
+  .bottom-left { bottom: 5px; left: 5px; }
+  .bottom-right { bottom: 5px; right: 5px; }
+  .center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+</style>
+</head>
+
+<body>
+
+<div class="sim-container">
+  <canvas id="canvas"></canvas>
+
+  <div class="label top-left">(0,0)</div>
+  <div class="label top-right">(Xmax,0)</div>
+  <div class="label bottom-left">(0,Ymax)</div>
+  <div class="label bottom-right">(Xmax,Ymax)</div>
+  <div class="label center" id="centerLabel"></div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const centerLabel = document.getElementById("centerLabel");
+
+let width = 0;
+let height = 0;
+let time = 0;
+
+// ===== Resize canvas properly =====
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  width = rect.width;
+  height = rect.height;
+
+  centerLabel.innerText = `${Math.round(width)} × ${Math.round(height)}`;
+}
+
+// ===== Draw loop =====
+function draw() {
+  ctx.clearRect(0, 0, width, height);
+
+  // Border
+  ctx.strokeStyle = "#00ccff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, width, height);
+
+  // Grid
+  ctx.strokeStyle = "#222";
+  ctx.lineWidth = 1;
+
+  for (let x = 0; x <= width; x += width / 10) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y <= height; y += height / 6) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = "#444";
+
+  ctx.beginPath();
+  ctx.moveTo(0, height / 2);
+  ctx.lineTo(width, height / 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(width / 2, 0);
+  ctx.lineTo(width / 2, height);
+  ctx.stroke();
+
+  // ===== Centered rectangle =====
+  const rectW = width / 2;
+  const rectH = height / 2;
+
+  const rectX = width / 2 - rectW / 2;
+  const rectY = height / 2 - rectH / 2;
+
+  ctx.strokeStyle = "#ffcc00";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(rectX, rectY, rectW, rectH);
+
+  // ===== Wave inside rectangle =====
+  const A = rectH * 0.4;
+  const pixelsPerCycle = 300;
+  const k = 2 * Math.PI / pixelsPerCycle;
+  const omega = 2 * Math.PI * 0.5;
+
+  ctx.beginPath();
+
+  for (let x = rectX; x <= rectX + rectW; x++) {
+    const localX = x - rectX;
+    const y = rectY + rectH / 2 + A * Math.sin(k * localX - omega * time);
+
+    if (y >= rectY && y <= rectY + rectH) {
+      if (x === rectX) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.strokeStyle = "#00ffcc";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Label
+  ctx.fillStyle = "#ffcc00";
+  ctx.font = "12px sans-serif";
+  ctx.fillText("Centered Rectangle", rectX + 10, rectY + 20);
+
+  time += 0.02;
+
+  requestAnimationFrame(draw);
+}
+
+// ===== iframe height sync =====
+function sendHeight() {
+  const h = document.body.scrollHeight;
+  parent.postMessage({ type: "resize", height: h }, "*");
+}
+
+// ===== Single clean init =====
+window.addEventListener("load", () => {
+  resizeCanvas();
+  requestAnimationFrame(draw);
+  sendHeight();
+});
+
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  sendHeight();
+});
+</script>
+
+</body>
+</html>
